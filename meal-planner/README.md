@@ -1,76 +1,85 @@
 # Family Meal Planner
 
-A small app for planning the week's dinners for the four of us. It installs
-on iPhone and Android from a web link, works offline, and keeps everything on
-the phone. There's no account and no server.
+Plans the week's dinners for Dad, Mum, Ralph and Arlo. It learns what everyone
+likes, builds the Sainsbury's shopping list, keeps both phones in sync, and
+sends a reminder on Sunday morning before the order closes. It installs on
+Android from a link and works offline.
 
 ## What it does
 
-- **Plans the week** from a mix you can change in Settings. The default is
-  2–3 chicken dinners, a steak, a salmon, mince every other week, a treat
-  night on Friday, and one new dish to try. It also balances the week across
-  cuisines, keeps long recipes off weeknights and suggests a roast on Sunday.
-- **One-off nights.** Tap a person's name on a day to mark them as out. The
-  planner then favours quick, kid-friendly meals when it's one parent and the
-  boys, and the shopping list scales down to match. If nobody's home, that day
-  is left empty.
-- **Learns what you like.** After a meal, everyone gives it 😍 👍 😐 or 👎.
-  Ratings are kept per person, so a dish the boys refused stops being
-  suggested on nights they eat but can still come up on adults-only nights.
-  Meals and cuisines you rate highly come back more often. Recently cooked
-  meals are rested. You can also ★ favourite a meal or 🚫 block it.
-- **Balance check.** Shows oily fish (aim for 1 or more a week), red meat,
-  veg per dinner, cuisine variety and treat nights.
-- **Shopping list.** Ingredients are merged across the week, scaled to who's
-  eating and grouped by aisle. It also includes your weekly regulars and
-  anything you add by hand, plus a "check the cupboard" list for staples.
-  Each item has a **Sainsbury's ↗** button that opens the search for it.
-- **Shopping-day reminder.** 📅 creates a calendar event with an alert at 9am
-  on shopping day, with the full list inside it. If notifications are
-  allowed, you also get one when you open the app on shopping day.
-- **Sharing between phones.** *Send to partner* sends the week as a link.
-  *Export/Import backup* merges plans, ratings and custom meals between the
-  two phones.
-- **Your own meals.** Add family recipes with ingredients in plain text
-  (`600g chicken thighs`, `1 tin chopped tomatoes`).
+- **Weekly plan, Tuesday to Monday.** The shop arrives Tuesday and the order
+  closes Sunday. By default each week has 2–3 chicken dinners, a steak, a
+  salmon, mince every other week, a Friday treat night and one new dish. You
+  can change all of these in Settings. Salmon and steak are planned early in
+  the week while they're fresh.
+- **Ralph and Arlo.** Ages come from their birthdays, so their portion sizes
+  grow with them. "Not keen on" (red onion for both) steers the planner away
+  from those dishes without banning them. When a planned meal has a
+  not-keen-on ingredient, it shows a hint.
+- **One-off nights.** Tap a name on a day to mark that person as out. That
+  night then favours quick, kid-friendly meals and the shopping amounts shrink.
+- **Learns.** Everyone rates each meal 😍 👍 😐 👎. Ratings are kept per
+  person, so a dish the boys refused stops coming up on nights they eat.
+- **Budget.** Ingredients are priced from rough Sainsbury's prices and
+  rounded up to whole packs. The weekly estimate is shown against the
+  £100–£120 budget. If a plan goes over, the priciest flexible meals are
+  swapped for cheaper ones.
+- **Leftovers and freezer.**
+  - A roast is followed by leftover fried rice the next day, chilli by chilli
+    jacket potatoes, and bolognese by a pasta bake. The shopping list buys
+    extra for the first meal.
+  - Tap 🧊 *Make double* on a batch-friendly meal and the second half goes in
+    the Freezer tab. The planner then uses one freezer meal a week on a
+    weeknight.
+- **Shopping list.** Ingredients are merged, scaled to who's eating and
+  grouped by aisle. Each item has a **Sainsbury's ↗** search link. The list
+  also includes your weekly regulars, anything you add by hand, and a
+  "check the cupboard" section for staples.
+- **Sync.** One phone taps *Start syncing* and sends an invite link to the
+  other. Plans, ratings, ticks, the freezer and settings then stay in step.
+- **Reminders.** At about 8am on order day you get a push notification with
+  the item count and estimate. The day before, you get a nudge if next week
+  isn't planned yet.
 
-## About Sainsbury's
+Sainsbury's has no public API for filling a trolley, so the app links to a
+search for each item instead.
 
-Sainsbury's has no public API for adding items to a trolley, and its site
-blocks automated access. So the app links each item to a Sainsbury's search
-instead: tap, add to trolley, tick it off.
+## How it's built
 
-## Running it
+| Path | What |
+| --- | --- |
+| `public/` | The app: plain HTML, CSS and JS modules with no build step. Installable PWA. |
+| `public/js/recipes.js` | 62 meals across 17 cuisines (amounts are for 3 adult portions). |
+| `public/js/planner.js` | Weekly mix, scoring, learning, leftovers, freezer, budget. |
+| `public/js/shopping.js`, `prices.js` | Shopping list, scaling, aisle grouping, costs. |
+| `public/js/sync.js`, `model.js`, `store.js` | State, local storage, sync. |
+| `api/sync.js` | Merges a phone's changes into the family's copy (Vercel Blob, private). |
+| `api/cron.js` | Daily job that sends the order-day push notifications. |
+| `api/config.js` | Gives the app the public push key. |
 
-It's a plain static site with no build step.
+**How syncing works.** Data is split into small records (one per day, one per
+rating, one per ticked item and so on), and each record carries the time it
+last changed. The two phones and the server merge by keeping the newer copy
+of each record, so you can both edit at once. The family's data lives in one
+private Blob file, named after a hash of the family code.
+
+## Running locally
 
 ```sh
-cd meal-planner
-npm start            # http://localhost:8080
-npm test             # unit tests (Node 20+)
+npm install
+npm run dev     # http://localhost:3000 — the sync API runs in memory
+npm test
 ```
 
-To get it onto your phones, it needs to be served over HTTPS once. After
-that it works offline.
+## Deploying (Vercel)
 
-1. **GitHub Pages:** the workflow in `.github/workflows/meal-planner-pages.yml`
-   deploys this folder when it's merged to `master`. One-off setup: go to
-   Settings → Pages and set Source to *GitHub Actions*.
-2. **Any static host** (Netlify, Vercel, Cloudflare Pages): point it at this
-   folder.
-
-Then install it:
-
-- **iPhone:** open the link in Safari → Share → *Add to Home Screen*.
-- **Android:** open the link in Chrome → ⋮ → *Install app*.
-
-## Code map
-
-| File | What's in it |
-| --- | --- |
-| `js/recipes.js` | The meal library (59 meals, 17 cuisines). Quantities are for 3 adult portions. |
-| `js/planner.js` | Weekly mix, scoring, learning from ratings, balance check. No DOM. |
-| `js/shopping.js` | Ingredient parsing, aisle grouping, merging and scaling, text and calendar export. |
-| `js/store.js` | localStorage, share links, backup merge. |
-| `js/app.js` | The UI. |
-| `sw.js` | Offline cache. |
+1. Create a Vercel project from this repo. No framework preset is needed;
+   `vercel.json` sets the output to `public/`.
+2. Add a **private** Blob store to the project. This sets
+   `BLOB_READ_WRITE_TOKEN`.
+3. Set these environment variables:
+   - `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`, generated with
+     `npx web-push generate-vapid-keys`
+   - `CRON_SECRET`, any long random string
+4. The daily cron is configured in `vercel.json`. It runs at 07:00 UTC, which
+   is 8am in summer and 7am in winter UK time.

@@ -2,6 +2,7 @@
 // the week, group by aisle, and export (text, Sainsbury's links, calendar).
 
 import { BASE_PORTIONS } from './recipes.js';
+import { STAPLE_PRICE, DEFAULT_ITEM_PRICE, itemCost, regularCost, usedCost } from './prices.js';
 
 export const CATEGORIES = ['Fruit & veg', 'Meat', 'Fish', 'Dairy & eggs', 'Bakery', 'Cupboard', 'Frozen', 'Regulars & extras'];
 
@@ -31,7 +32,16 @@ export function parseIngredient(line) {
   if (unit === 'l') { qty *= 1000; unit = 'ml'; }
   name = name.trim().toLowerCase();
   if (name === 'garlic' && unit === 'bulb') { qty *= 10; unit = 'clove'; }
+  if (!unit) name = singularName(name);
   return { qty, unit, name };
+}
+
+// Counted items are stored singular so "1 lime" and "2 limes" merge.
+export function singularName(name) {
+  if (/(ss|us)$/.test(name) || !/s$/.test(name)) return name;
+  if (/chillies$/.test(name)) return name.replace(/chillies$/, 'chilli');
+  if (/oes$/.test(name)) return name.slice(0, -2);
+  return name.slice(0, -1);
 }
 
 const CATEGORY_RULES = [
@@ -64,6 +74,7 @@ function roundQty(qty, unit) {
     return Math.max(step, Math.round(qty / step) * step);
   }
   if (unit === 'tbsp' || unit === 'tsp') return Math.max(1, Math.ceil(qty - 0.1));
+  if (unit === 'clove') return Math.max(1, Math.round(qty));
   return Math.max(1, Math.ceil(qty - 0.2));
 }
 
@@ -99,19 +110,43 @@ export function itemKey(name, unit) {
   return `${name}|${unit}`;
 }
 
+/** How much of a day's recipe to buy for: who's eating, cooking double, leftovers. */
+export function dayScale(week, dayIndex, recipesById, members) {
+  const day = week.days[dayIndex];
+  const recipe = recipesById[day.recipeId];
+  if (!recipe || !day.eaters.length || day.fromFreezer) return 0;
+  let scale = portionsFor(day.eaters, members) / BASE_PORTIONS;
+  if (day.double) scale *= 2;
+  const next = week.days[dayIndex + 1];
+  const nextRecipe = next && recipesById[next.recipeId];
+  if (nextRecipe?.leftoverOf === recipe.id && !next.fromFreezer && next.eaters.length) {
+    scale += (nextRecipe.extraScale || 0) * portionsFor(next.eaters, members) / BASE_PORTIONS;
+  }
+  return scale;
+}
+
+/** Proportional ingredient cost of a recipe for `portions` (no pack rounding). */
+export function recipeCost(recipe, portions = BASE_PORTIONS) {
+  const scale = portions / BASE_PORTIONS;
+  return (recipe.ingredients || []).reduce((sum, line) => {
+    const ing = parseIngredient(line);
+    return sum + usedCost(ing.name, ing.qty == null ? null : ing.qty * scale, ing.unit);
+  }, 0);
+}
+
 /**
- * @param week      week object from planner
+ * @param week      { days, extras, staplesNeeded }
  * @param recipesById
- * @param settings  members + regulars
- * @returns {{ items, staples, groups }}
+ * @param options   { members (with numeric portion), regulars }
+ * @returns {{ items, groups, staples, totals }}
  */
-export function buildShoppingList(week, recipesById, settings) {
+export function buildShoppingList(week, recipesById, { members, regulars = [] }) {
   const merged = new Map();
   const staples = new Map();
-  for (const day of week.days) {
+  week.days.forEach((day, i) => {
     const recipe = recipesById[day.recipeId];
-    if (!recipe || !day.eaters.length) continue;
-    const scale = portionsFor(day.eaters, settings.members) / BASE_PORTIONS;
+    const scale = dayScale(week, i, recipesById, members);
+    if (!recipe || !scale) return;
     for (const line of recipe.ingredients || []) {
       const ing = parseIngredient(line);
       const key = itemKey(ing.name, ing.unit);
@@ -125,10 +160,13 @@ export function buildShoppingList(week, recipesById, settings) {
       if (!entry.meals.includes(recipe.name)) entry.meals.push(recipe.name);
       staples.set(s, entry);
     }
-  }
+  });
 
+  const totals = { dinners: 0, regulars: 0, extras: 0, staples: 0 };
   const items = [...merged.values()].map((e) => {
     const qty = e.qty == null ? null : roundQty(e.qty, e.unit);
+    const { cost } = itemCost(e.name, qty, e.unit);
+    totals.dinners += cost;
     return {
       key: e.key,
       name: e.name,
@@ -138,27 +176,34 @@ export function buildShoppingList(week, recipesById, settings) {
       category: categorise(e.name, e.unit),
       meals: e.meals,
       url: sainsburysUrl(e.name),
+      cost,
     };
   });
 
-  for (const r of settings.regulars || []) {
-    items.push({ key: `regular|${r}`, name: r, qty: null, unit: '', display: r, category: 'Regulars & extras', meals: ['Weekly regular'], url: sainsburysUrl(r), regular: true });
+  for (const r of regulars) {
+    const cost = regularCost(r);
+    totals.regulars += cost;
+    const term = r.replace(/\s*[x×]\s*\d+$/i, '');
+    items.push({ key: `regular|${r}`, name: r, qty: null, unit: '', display: r, category: 'Regulars & extras', meals: ['Weekly regular'], url: sainsburysUrl(term), regular: true, cost });
   }
   for (const x of week.extras || []) {
-    items.push({ key: `extra|${x}`, name: x, qty: null, unit: '', display: x, category: 'Regulars & extras', meals: ['Added by you'], url: sainsburysUrl(x), extra: true });
+    totals.extras += DEFAULT_ITEM_PRICE;
+    items.push({ key: `extra|${x}`, name: x, qty: null, unit: '', display: x, category: 'Regulars & extras', meals: ['Added by you'], url: sainsburysUrl(x), extra: true, cost: DEFAULT_ITEM_PRICE });
   }
   for (const s of staples.values()) {
     if (week.staplesNeeded?.[s.key]) {
-      items.push({ key: s.key, name: s.name, qty: null, unit: '', display: s.name, category: 'Cupboard', meals: s.meals, url: sainsburysUrl(s.name), staple: true });
+      totals.staples += STAPLE_PRICE;
+      items.push({ key: s.key, name: s.name, qty: null, unit: '', display: s.name, category: 'Cupboard', meals: s.meals, url: sainsburysUrl(s.name), staple: true, cost: STAPLE_PRICE });
     }
   }
+  totals.total = totals.dinners + totals.regulars + totals.extras + totals.staples;
 
   const groups = CATEGORIES.map((category) => ({
     category,
     items: items.filter((i) => i.category === category).sort((a, b) => a.name.localeCompare(b.name)),
   })).filter((g) => g.items.length);
 
-  return { items, groups, staples: [...staples.values()].sort((a, b) => a.name.localeCompare(b.name)) };
+  return { items, groups, staples: [...staples.values()].sort((a, b) => a.name.localeCompare(b.name)), totals };
 }
 
 export function listToText(list, title, checked = {}) {

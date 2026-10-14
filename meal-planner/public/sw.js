@@ -1,5 +1,5 @@
 // Offline support: cache the app shell, serve it cache-first, refresh in the background.
-const CACHE = 'meal-planner-v1';
+const CACHE = 'meal-planner-v2';
 const SHELL = [
   './',
   'index.html',
@@ -10,6 +10,9 @@ const SHELL = [
   'js/recipes.js',
   'js/shopping.js',
   'js/store.js',
+  'js/model.js',
+  'js/sync.js',
+  'js/prices.js',
   'icons/icon.svg',
   'icons/icon-192.png',
   'icons/icon-512.png',
@@ -30,7 +33,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const cached = await cache.match(event.request, { ignoreSearch: true });
@@ -45,13 +48,30 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: 'Family Meals', body: event.data?.text() };
+  }
+  event.waitUntil(self.registration.showNotification(data.title || 'Family Meals', {
+    body: data.body || '',
+    icon: 'icons/icon-192.png',
+    badge: 'icons/icon-192.png',
+    tag: 'meal-planner',
+    data: { url: data.url || './' },
+  }));
+});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const url = new URL(event.notification.data?.url || './', self.location.origin).href;
   event.waitUntil(
-    self.clients.matchAll({ type: 'window' }).then((clients) => {
-      const existing = clients.find((c) => 'focus' in c);
-      if (existing) return existing.focus();
-      return self.clients.openWindow('./?tab=shop');
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      const existing = clients.find((c) => 'navigate' in c);
+      if (existing) return existing.navigate(url).then((c) => c?.focus());
+      return self.clients.openWindow(url);
     }),
   );
 });

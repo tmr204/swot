@@ -2,8 +2,16 @@
   "name": "family-meal-planner",
   "private": true,
   "type": "module",
+  "description": "Family weekly meal planner with shopping list, learning and phone sync.",
   "scripts": {
-    "test": "node --test tests/*.test.js",
-    "start": "python3 -m http.server 8080"
+    "dev": "node scripts/dev-server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.8.2",
+    "web-push": "^3.6.7"
   }
 }

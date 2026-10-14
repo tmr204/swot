@@ -13,7 +13,8 @@
 //   veg      approx. portions of veg/fruit per adult serving
 //   kid      generally a hit with young children
 //   cheat    a treat / fakeaway night
-//   tags     spicy | oily-fish | red-meat | nuts | batch | quick | roast
+//   tags     spicy | oily-fish | red-meat | nuts | batch | quick | roast | leftovers
+//   leftoverOf  only offered the day after this recipe (extraScale: extra to buy for it)
 //   tip      how to make it work for the boys
 
 export const BASE_PORTIONS = 3;
@@ -688,6 +689,46 @@ export const RECIPES = [
       'Roast cubed sweet potato with oil and spices at 200°C for 25 min.',
       'Warm the beans and sweetcorn and roughly mash with the sweet potato.',
       'Fill the wraps with the mix, cheese and avocado; toast in a dry pan.'],
+  },
+
+  // -------------------------------------------------------------- Leftovers
+  // Only suggested the day after their source meal. `extraScale` adds that
+  // much extra to the source meal's shopping so there's enough left over.
+  {
+    id: 'roast-chicken-fried-rice', name: 'Leftover roast chicken fried rice', cuisine: 'Chinese',
+    protein: 'chicken', time: 20, kid: true, veg: 1.5, tags: ['quick', 'leftovers'],
+    leftoverOf: 'roast-chicken', extraScale: 0,
+    tip: 'Uses up yesterday\'s roast — shred the chicken small for the boys.',
+    ingredients: ['300g long grain rice', '3 eggs', '150g frozen peas', '1 bunch spring onions', '150g sweetcorn'],
+    staples: ['soy sauce', 'sesame oil', 'vegetable oil'],
+    method: [
+      'Cook the rice (or use leftover rice) and let it steam dry.',
+      'Stir-fry the peas and sweetcorn 3 min, push aside and scramble the eggs.',
+      'Add the rice, shredded leftover chicken and 2–3 tbsp soy; toss until piping hot.',
+      'Finish with sesame oil and spring onions.'],
+  },
+  {
+    id: 'chilli-jackets', name: 'Leftover chilli jacket potatoes', cuisine: 'Mexican',
+    protein: 'mince', time: 25, kid: true, veg: 1.5, tags: ['red-meat', 'leftovers'],
+    leftoverOf: 'chilli-con-carne', extraScale: 0.6,
+    tip: 'Mild chilli on a buttery potato — easy win.',
+    ingredients: ['4 baking potatoes', '100g grated cheddar', '1 bag mixed salad'],
+    staples: ['butter'],
+    method: [
+      'Prick the potatoes and microwave 8–10 min, then crisp in a hot oven for 15 min.',
+      'Reheat the leftover chilli until piping hot.',
+      'Split the potatoes, spoon over the chilli and top with cheese. Salad on the side.'],
+  },
+  {
+    id: 'bolognese-pasta-bake', name: 'Leftover bolognese pasta bake', cuisine: 'Italian',
+    protein: 'mince', time: 30, kid: true, veg: 1.5, tags: ['red-meat', 'leftovers'],
+    leftoverOf: 'spag-bol', extraScale: 0.6,
+    tip: 'Different shape, same sauce — counts as a new meal to a 3-year-old.',
+    ingredients: ['300g penne', '150g grated mozzarella', '1 bag mixed salad'],
+    staples: [],
+    method: [
+      'Cook the penne and mix with the leftover bolognese.',
+      'Tip into a dish, cover with mozzarella and bake at 200°C for 15–20 min.'],
   },
 
   // ------------------------------------------------------------ Cheat meals

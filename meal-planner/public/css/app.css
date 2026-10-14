@@ -99,7 +99,7 @@ main { padding: 0 16px; max-width: 640px; margin: 0 auto; }
   left: 0; right: 0; bottom: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   background: var(--card);
   border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
@@ -314,3 +314,37 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 @media (max-width: 380px) {
   .member-row { grid-template-columns: 1fr 1fr; }
 }
+
+/* v2 additions */
+#topbar-actions { display: flex; align-items: center; gap: 10px; }
+.sync-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--line); display: inline-block; cursor: pointer; }
+.sync-dot[data-state="ok"] { background: var(--brand); }
+.sync-dot[data-state="syncing"] { background: var(--accent); animation: pulse 1s infinite alternate; }
+.sync-dot[data-state="error"] { background: var(--warn); }
+.sync-dot[data-state="off"] { display: none; }
+@keyframes pulse { from { opacity: .4; } to { opacity: 1; } }
+
+.note { font-size: .8rem; color: var(--muted); margin-top: 6px; }
+.note.good { color: var(--brand); }
+.tip.warn { background: var(--warn-soft); color: var(--text); }
+
+.budget-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 1.15rem; }
+.meter { height: 10px; border-radius: 999px; background: var(--bg); overflow: hidden; margin: 8px 0; border: 1px solid var(--line); }
+.meter span { display: block; height: 100%; background: var(--brand); border-radius: 999px; }
+.budget.over .meter span { background: var(--warn); }
+.budget.over .budget-head strong { color: var(--warn); }
+
+.code { font: 600 1.6rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; margin: 4px 0; }
+
+.member { border-bottom: 1px solid var(--line); padding: 8px 0; margin-bottom: 8px; }
+.member .member-row { grid-template-columns: 1fr 1fr auto; margin-bottom: 6px; }
+.member p { margin: 0; }
+.card .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field input[type=number] { width: 90px; flex: none; }
+
+.freezer-list { list-style: none; margin: 12px 0; padding: 0 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+.freezer-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.freezer-row:last-child { border-bottom: 0; }
+.freezer-row button { flex: none; }
+main { overflow-x: hidden; }
+.tabs button { font-size: .7rem; }
